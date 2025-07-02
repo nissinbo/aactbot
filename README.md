@@ -1,10 +1,10 @@
-# AACT Bot - Shiny Application
+# AACT Bot
 
-AACT (Aggregate Analysis of ClinicalTrials.gov) データベースの分析を支援するAIチャットボットです。
+AACT Bot（Aggregate Analysis of ClinicalTrials.gov Bot）は、臨床試験データの分析を支援するAIチャットボットです。
 
 ## 機能
 
-- **AACT データベース接続**: PostgreSQL データベースへの接続機能
+- **データベース接続**: PostgreSQL データベースへの接続機能
 - **AI チャットインターフェース**: Google Gemini APIを使用した対話型分析
 - **SQL クエリ実行**: AACT データベースに対するSQL クエリの実行
 - **R コード実行**: 統計解析とデータ可視化
@@ -45,9 +45,9 @@ Google Gemini API キーが必要です。以下の環境変数のいずれか�
 - `GEMINI_API_KEY`
 - `AACTBOT_API_KEY`
 
-### AACT データベースアクセス
+### データベース接続
 
-AACT データベースにアクセスするには、以下が必要です：
+データベースに接続するには、以下が必要です：
 
 1. [AACT ウェブサイト](https://aact-db.ctti-clinicaltrials.org/)でアカウント登録
 2. データベースのユーザー名とパスワード

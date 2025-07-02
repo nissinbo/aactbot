@@ -19,7 +19,7 @@ To begin your analysis, you need to connect to the AACT database:
 1. **データベース接続**: 上部のフォームにAACTのユーザー名とパスワードを入力して「接続」ボタンをクリックしてください
 2. **接続確認**: 接続が成功すると緑色のメッセージが表示されます
 
-接続後、「AACT データベースに接続されました。分析を開始します」のようにお知らせください。どのような臨床試験データの分析をしたいかお聞かせください。
+接続後、「AACT Botに接続されました。分析を開始します」のようにお知らせください。どのような臨床試験データの分析をしたいかお聞かせください。
 
 ## AACT Database Analysis Guidelines
 
@@ -331,7 +331,9 @@ study_data <- data.frame(
 
 # 可視化
 ggplot(study_data, aes(x = reorder(study_type, -count), y = count)) + 
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity") + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 **パッケージについて**:

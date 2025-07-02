@@ -12,7 +12,7 @@ ui <- bslib::page_fillable(
   shinyjs::useShinyjs(),
   div(
     style = "padding: 10px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; margin-bottom: 10px;",
-    h4("AACT データベース接続", style = "margin-bottom: 15px; color: #495057;"),
+    h4("AACT Bot", style = "margin-bottom: 15px; color: #495057;"),
     div(
       style = "display: flex; gap: 15px; flex-wrap: wrap; align-items: end;",
       div(
@@ -92,7 +92,7 @@ server <- function(input, output, session) {
       shinyjs::show("connection_status")
       
       output$connection_message <- renderText({
-        "AACT データベースに正常に接続されました"
+        "AACT Botに正常に接続されました"
       })
       
       # Style the status message as success
@@ -100,7 +100,7 @@ server <- function(input, output, session) {
         $('#connection_status').removeClass('alert-danger').addClass('alert alert-success');
       ")
       
-      showNotification("AACT データベースに接続しました", type = "message")
+      showNotification("AACT Botに接続しました", type = "message")
       
     }, error = function(e) {
       session_storage[[session_id]]$connection_status <- FALSE
