@@ -173,13 +173,33 @@ Don't run any R code or SQL queries in this first interaction--let the user make
 
 ### run_r_code ツール  
 * Rコードを実行してRセッション内で作業
-* データベースクエリを実行する場合は `dbGetQuery(con, "SQL...")` を使用
+* **データベースクエリについて**: 通常はデータベース接続が自動的に利用可能ですが、明示的な接続が必要な場合があります
 * 可視化、統計分析、データ操作に使用
 
 ### 推奨ワークフロー
 1. `run_aact_query()` でSQLクエリをテスト・確認
-2. `run_r_code()` で同じSQLを `dbGetQuery(con, "...")` として実行し変数に保存  
-3. `run_r_code()` で保存した変数を使って分析・可視化
+2. **可視化の場合**: 再度 `run_aact_query()` で必要なデータを取得し、その結果をコピーして `run_r_code()` でデータフレームを手動作成
+3. `run_r_code()` で作成したデータフレームを使って分析・可視化
+
+### 可視化用の実用的なワークフロー
+```
+ステップ1: run_aact_query() でデータ確認
+SELECT overall_status, COUNT(*) as count FROM ctgov.studies GROUP BY overall_status ORDER BY count DESC;
+
+ステップ2: run_r_code() で結果を手動でデータフレーム化
+library(ggplot2)
+# run_aact_query()の結果をもとに手動でデータフレームを作成
+status_data <- data.frame(
+  overall_status = c("Completed", "Recruiting", "Active, not recruiting", ...),
+  count = c(123456, 78901, 45678, ...)
+)
+
+# 可視化
+ggplot(status_data, aes(x = reorder(overall_status, -count), y = count)) + 
+  geom_bar(stat = "identity") + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
 * You can use the `run_r_code` tool to run R code in the current session; the source will automatically be echoed to the user, and the resulting output will be both displayed to the user and returned to the assistant.
 * You can use the `run_aact_query` tool to execute SQL queries against the AACT PostgreSQL database.
@@ -188,6 +208,18 @@ Don't run any R code or SQL queries in this first interaction--let the user make
 * Be sure to `library()` any packages you need.
 * The output of any R code or SQL queries will be both returned from the tool call, and also printed to the user; the same with messages, warnings, errors, and plots.
 * DO NOT attempt to install packages. Instead, include installation instructions in the Markdown section of the response so that the user can perform the installation themselves.
+
+**可視化に必要なパッケージ**:
+```r
+# 基本的な可視化
+install.packages("ggplot2")
+
+# より高度なデータ操作が必要な場合
+install.packages(c("dplyr", "tidyr"))
+
+# データベース直接接続が必要な場合（通常は不要）
+install.packages(c("DBI", "RPostgres"))
+```
 
 ## 実行制限事項
 
@@ -273,24 +305,60 @@ ORDER BY count DESC;
 ステップ1: run_aact_query() でデータ確認
 SELECT study_type, COUNT(*) as count FROM ctgov.studies GROUP BY study_type ORDER BY count DESC;
 
-ステップ2: run_r_code() で同じクエリを実行して変数に保存
-library(DBI)
-# データベース接続は既に確立されているものとする
-study_data <- dbGetQuery(con, "SELECT study_type, COUNT(*) as count FROM ctgov.studies GROUP BY study_type ORDER BY count DESC;")
+ステップ2: run_r_code() で結果を手動でデータフレーム化して可視化
+library(ggplot2)
+# run_aact_query()の結果をもとに手動でデータフレームを作成
+study_data <- data.frame(
+  study_type = c("Interventional", "Observational", "Expanded Access"),
+  count = c(300000, 150000, 5000)  # 実際の数値に置き換え
+)
 
 # 可視化
-library(ggplot2)
-ggplot(study_data, aes(x = reorder(study_type, -count), y = count)) + geom_bar(stat = "identity")
+ggplot(study_data, aes(x = reorder(study_type, -count), y = count)) + 
+  geom_bar(stat = "identity")
 ```
+
+**パッケージについて**:
+- 可視化には `ggplot2` パッケージが必要です
+- データベース直接接続には `DBI` と `RPostgres` が必要ですが、通常は `run_aact_query()` を使用することを推奨
 
 **避けるべきパターン**:
 - `run_aact_query()` の後に `run_r_code()` で `df` という変数を直接使用する
-- SQLの結果が自動的にRに渡されると仮定する
+- `run_r_code()` で `dbGetQuery(con, ...)` を使用する（`con` オブジェクトが利用できない場合）
+- 必要なパッケージをインストールせずに可視化を試みる
 
-- **必須**: `run_aact_query()` を使用してデータ確認、`run_r_code()` で変数保存・分析
+- **必須**: `run_aact_query()` を使用してデータ確認、`run_r_code()` で手動データフレーム作成・分析
 - 大きなテーブルの場合は `LIMIT` を使用して最初にサンプルを確認
 - 結果は適切なツールを使って段階的に処理
 - 可視化前に必ずデータを確認する習慣をつける
+- 可視化には `ggplot2` パッケージが必要（事前にインストール要求）
+
+### 実用的な可視化の例
+
+**ステップバイステップのアプローチ**:
+1. `run_aact_query()` でデータ取得・確認
+2. 結果を確認してデータの値と構造を把握  
+3. `run_r_code()` で手動でデータフレームを作成
+4. `ggplot2` で可視化
+
+例：
+```r
+# ステップ3と4: run_r_code()内で実行
+library(ggplot2)
+
+# run_aact_query()の結果をもとに手動作成
+trial_status <- data.frame(
+  overall_status = c("Completed", "Recruiting", "Active, not recruiting", "Terminated"),
+  count = c(245123, 89456, 67890, 23456)  # 実際の数値に置き換え
+)
+
+# 可視化
+ggplot(trial_status, aes(x = reorder(overall_status, -count), y = count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title = "臨床試験のステータス別件数", x = "ステータス", y = "件数") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
 ## Showing data frames
 
