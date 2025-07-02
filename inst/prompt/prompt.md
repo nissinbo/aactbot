@@ -30,7 +30,7 @@ To begin your analysis, you need to connect to the AACT database:
 AACTデータベースには以下の主要なスキーマとテーブルがあります：
 
 #### ctgov スキーマ（主要テーブル）
-- **studies**: 臨床試験のメイン情報
+- **studies**: 臨床試験のメイン情報（主キー: nct_id）
   - nct_id (試験ID), study_type, brief_title, official_title, overall_status
   - start_date, completion_date, phase, enrollment
   - source, source_class
@@ -42,10 +42,16 @@ AACTデータベースには以下の主要なスキーマとテーブルがあ�
   - nct_id, intervention_type, name, description
 - **facilities**: 実施施設情報
   - nct_id, name (施設名), city, state, country, status
+  - 注: ステータスが'Recruiting'または'Not yet recruiting'の場合のみ詳細情報が含まれる
 - **countries**: 国情報
   - nct_id, name (国名), removed
+  - 注: removed=trueは削除された国を示す
 - **outcomes**: 評価項目情報
   - nct_id, outcome_type, measure, description
+- **facility_contacts**: 施設連絡先情報
+  - nct_id, facility_id, contact_type, name, email, phone
+- **facility_investigators**: 施設研究者情報
+  - nct_id, facility_id, role, name
 
 #### public スキーマ
 - **studies**: 基本的な試験情報（カラム数が少ない）
@@ -81,17 +87,24 @@ AACTデータベースには以下の主要なスキーマとテーブルがあ�
    - `information_schema.columns` で実際のカラム名を確認
    - ユーザーに「データベース構造を確認しています」と伝えてから調査を実行
 
-3. **効率的な検索方法**:
+4. **効率的な検索方法**:
    - スポンサー検索: `ctgov.sponsors` テーブルの `name` カラム
    - 疾患検索: `ctgov.conditions` テーブルの `name` または `downcase_name` カラム
-   - 地域検索: `ctgov.facilities` テーブルの `country` カラム
+   - 地域検索: `ctgov.facilities` テーブルの `country` カラム、または `ctgov.countries` テーブルの `name` カラム
    - 薬剤検索: `ctgov.interventions` テーブルの `name` カラム
 
-4. **分析の基本パターン**:
+5. **分析の基本パターン**:
    - **データ取得**: `run_aact_query()` でSQLを実行し、データフレームを取得
    - **データ確認**: `print(df)` または単に `df` でデータフレームを表示
    - **可視化**: `run_r_code()` でggplot2等を使用してグラフ作成
    - **統計分析**: Rの関数を使用してさらなる分析
+
+**重要なデータベース規則**:
+- すべてのテーブルに `nct_id` カラムがあり、これが主要な結合キー
+- テーブル名は複数形、カラム名は単数形
+- `_date` で終わるカラムは日付型
+- `_id` で終わるカラムは外部キー
+- 大文字小文字は区別されない（PostgreSQL仕様）
 
 ## Get started
 
@@ -252,14 +265,14 @@ FROM ctgov.sponsors
 WHERE name ILIKE '%企業名%'
 ORDER BY name;
 
--- 5. 特定の期間の試験（例：2024年開始）
-SELECT s.nct_id, s.brief_title, s.overall_status, s.start_date, sp.name as sponsor_name
+-- 5. 日本の施設で実施された試験（例）
+SELECT s.nct_id, s.brief_title, s.overall_status, f.name as facility_name, f.city
 FROM ctgov.studies s
-JOIN ctgov.sponsors sp ON s.nct_id = sp.nct_id
-WHERE sp.name ILIKE '%Kyowa Kirin%' 
-  AND s.start_date >= '2024-01-01' 
-  AND s.start_date < '2025-01-01'
-ORDER BY s.start_date DESC;
+JOIN ctgov.facilities f ON s.nct_id = f.nct_id
+WHERE f.country = 'Japan' 
+  AND s.start_date >= '2024-01-01'
+ORDER BY s.start_date DESC
+LIMIT 10;
 
 -- 6. フェーズ別の集計（可視化用）
 SELECT s.phase, COUNT(*) as count
@@ -279,17 +292,20 @@ ORDER BY count DESC;
    - 例: studies + sponsors + conditions
 
 2. **日本関連の試験検索**:
-   - `ctgov.locations` テーブルで `country = 'Japan'`
-   - または `country ILIKE '%japan%'`
+   - `ctgov.facilities` テーブルで `country = 'Japan'`
+   - または `ctgov.countries` テーブルで `name = 'Japan'` AND `removed = false`
+   - 注: `countries` テーブルの `removed = true` は削除された国を示す
 
 3. **特定企業の試験検索**:
    - `ctgov.sponsors` テーブルで `name ILIKE '%企業名%'`
    - `lead_or_collaborator` でリード/協力者の区別
 
-4. **検索のコツ**:
+5. **検索のコツ**:
    - 企業名の部分一致: `ILIKE '%Kyowa%'` または `ILIKE '%Kirin%'`
    - 大文字小文字を無視: `ILIKE` を使用
    - 複数条件: `AND`, `OR` を適切に使用
+   - 日付検索: `start_date >= '2024-01-01'` 形式を使用
+   - 国検索: `facilities` または `countries` テーブルを使用
 
 ### データの取得と処理の推奨フロー
 
