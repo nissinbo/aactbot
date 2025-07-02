@@ -5,6 +5,7 @@
 Sys.setenv(NO_COLOR = "1")
 
 # Required libraries
+library(tidyverse)
 library(shiny)
 library(bslib)
 library(shinyjs)
@@ -22,7 +23,6 @@ library(evaluate)
 library(promises)
 library(coro)
 library(whisker)
-library(tibble)
 library(withr)
 library(utils)
 library(rlang)
@@ -44,11 +44,11 @@ globals <- new.env(parent = emptyenv())
 # Helper functions for session management
 reset_session_state <- function(session_id) {
   # Disconnect any existing AACT connection
-  if (exists(session_id, envir = session_storage) && 
-      !is.null(session_storage[[session_id]]$aact_connection)) {
+  if (exists(session_id, envir = session_storage) &&
+    !is.null(session_storage[[session_id]]$aact_connection)) {
     try(DBI::dbDisconnect(session_storage[[session_id]]$aact_connection), silent = TRUE)
   }
-  
+
   session_storage[[session_id]] <- list(
     turns = NULL,
     ui_messages = fastmap::fastqueue(),
